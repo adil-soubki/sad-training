@@ -1,0 +1,7 @@
+Given the passage, answer a question.
+
+Passage:
+{passage}
+
+Question:
+For each entity/person the author mentioned which has beliefs, emotions, or opinions, summarize what the author thinks their emotions are.

@@ -1,0 +1,7 @@
+Given the passage, answer a question. Be as precise and succinct as possible.
+
+Passage:
+{passage}
+
+Question:
+List all people or groups/types of people that are mentioned in the passage separated by commas. Return only the list, nothing else. If there is no passage, people, or groups of people say "Empty". Only return entities mentioned that have beliefs, emotions, or opinions.

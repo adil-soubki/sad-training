@@ -1,0 +1,31 @@
+{
+    "model_name_or_path": "outputs/seq2seq/default/fold_0/checkpoint-240581",
+    "output_dir": "outputs/classification/cb/seq2seq-pretrained-flan-t5-base",
+    "overwrite_output_dir": true,
+    "use_int8": false,
+    "use_lora": false,
+    "lora_r": 64,
+
+    "save_total_limit": 1,
+    "metric_for_classification": "f1_per_class",
+    "metric_for_regression": "mae",
+    "save_strategy": "epoch",
+    "evaluation_strategy": "epoch",
+
+    "dataset": "commitment_bank",
+    "dataset_kwargs": {"num_labels": 5},
+    "text_column": "cb_target",
+    "label_column": "cb_val",
+    "data_seed": 19,
+    "data_num_folds": 5,
+    "do_regression": false,
+    "do_train": true,
+    "do_eval": true,
+    "do_predict": false,
+
+    "text_max_length": 275,
+    "per_device_train_batch_size": 1,
+    "per_device_eval_batch_size": 1,
+    "learning_rate": 2e-5,
+    "num_train_epochs": 5
+}
