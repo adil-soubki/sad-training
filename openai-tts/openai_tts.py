@@ -15,9 +15,9 @@ from openai import AsyncOpenAI
 client = AsyncOpenAI(api_key=keychain.get("IACS"))
 
 def save_audio(audio_contents, corpus_name, voice, filenames):
-    os.makedirs(f"audio/{corpus_name}/{voice}", exist_ok=True)
+    os.makedirs(f"audio/clipped/{corpus_name}/{voice}", exist_ok=True)
     for audio, filename in zip(audio_contents, filenames):
-        with open(f"audio/{corpus_name}/{voice}/{voice}_{filename}", "wb") as f:
+        with open(f"audio/clipped/{corpus_name}/{voice}/{voice}_{filename}", "wb") as f:
             f.write(audio)
 
 @backoff.on_exception(backoff.expo, openai.RateLimitError)
@@ -47,9 +47,10 @@ async def generate_and_save_audio(corpus_name: str, texts: list[str], files: lis
 
 async def main():
     cb_data = pd.read_json("../data/cb/annotations.jsonl", lines=True)
-    cb_texts = cb_data["turn"].tolist()
+    # cb_texts = cb_data["turn"].tolist()
+    cb_texts = cb_data["cb_target"].tolist()
     files = cb_data["audio_file"].tolist()
-    await generate_and_save_audio("cb", cb_texts, files, batch_size=30)
+    await generate_and_save_audio("cb", cb_texts, files, batch_size=10)
 
 if __name__ == "__main__":
     asyncio.run(main())
