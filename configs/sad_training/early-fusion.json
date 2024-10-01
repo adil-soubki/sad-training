@@ -1,0 +1,33 @@
+{
+    "text_model_name_or_path": "google-bert/bert-base-uncased",
+    "audio_model_name_or_path": "openai/whisper-base",
+    "use_opensmile_features": false,
+    "freeze_audio_model": false,
+    "freeze_text_model": false,
+    "fusion_strategy": "early",
+    "output_dir": "outputs/sad_training/early-fusion",
+    "overwrite_output_dir": true,
+    "do_regression": false,
+    "do_train": true,
+    "do_eval": true,
+    "do_predict": false,
+
+    "save_total_limit": 1,
+    "metric_for_classification": "accuracy",
+    "metric_for_regression": "mae",
+    "save_strategy": "epoch",
+    "evaluation_strategy": "epoch",
+
+    "data_seed": 19,
+    "data_num_folds": 5,
+    "data_fold": 0,
+    "max_train_samples": null,
+    "max_eval_samples": null,
+
+    "text_max_length": 512,
+    "audio_max_length": 30,
+    "per_device_train_batch_size": 1,
+    "per_device_eval_batch_size": 1,
+    "learning_rate": 2e-5,
+    "num_train_epochs": 5
+}

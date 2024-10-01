@@ -1,0 +1,87 @@
+{
+    "boolq": {
+        "metric_for_classification": "accuracy",
+        "dataset": "boolq",
+        "dataset_kwargs": {},
+        "text_column": "input_text",
+        "label_column": "label"
+    },
+    "commitment_bank": {
+        "metric_for_classification": "f1_per_class",
+        "dataset": "commitment_bank",
+        "dataset_kwargs": {"num_labels": 5},
+        "num_labels": 5,
+        "num_train_epochs": 10,
+        "text_column": "cb_target",
+        "label_column": "cb_val_float",
+        "do_regression": true,
+        "audio_sources": [null, "nova", "gold"]
+    },
+    "fantom_bin": {
+        "metric_for_classification": "accuracy",
+        "dataset": "fantom",
+        "dataset_kwargs": {
+            "conversation_input_type": "short",
+            "question_type": "all",
+            "answer_type": "binary"
+        },
+        "text_column": "input_text",
+        "label_column": "label_name"
+    },
+    "fantom_mc": {
+        "metric_for_classification": "accuracy",
+        "dataset": "fantom",
+        "dataset_kwargs": {
+            "conversation_input_type": "short",
+            "question_type": "all",
+            "answer_type": "multiple-choice"
+        },
+        "num_train_epochs": 10,
+        "text_column": "input_text",
+        "label_column": "label_name"
+    },
+    "goemotions": {
+        "metric_for_classification": "f1_per_class",
+        "dataset": "goemotions",
+        "dataset_kwargs": {"label_type": "original", "multilabel": false},
+        "text_column": "text",
+        "label_column": "label_name"
+    },
+    "goemotions_ekman": {
+        "metric_for_classification": "f1_per_class",
+        "dataset": "goemotions",
+        "dataset_kwargs": {"label_type": "ekman", "multilabel": false},
+        "text_column": "text",
+        "label_column": "label_name"
+    },
+    "iemocap": {
+        "metric_for_classification": "f1_per_class",
+        "dataset": "iemocap",
+        "dataset_kwargs": {},
+        "text_column": "text",
+        "label_column": "label"
+    },
+    "imdb": {
+        "metric_for_classification": "accuracy",
+        "dataset": "imdb",
+        "dataset_kwargs": {},
+        "max_eval_samples": 500,
+        "text_column": "text",
+        "label_column": "label"
+    },
+    "wsc": {
+        "metric_for_classification": "accuracy",
+        "dataset": "wsc",
+        "dataset_kwargs": {},
+        "num_train_epochs": 10,
+        "text_column": "input_text",
+        "label_column": "label"
+    },
+    "wic": {
+        "metric_for_classification": "accuracy",
+        "dataset": "wic",
+        "dataset_kwargs": {},
+        "text_column": "input_text",
+        "label_column": "label"
+    }
+}

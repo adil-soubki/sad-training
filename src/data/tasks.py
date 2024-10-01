@@ -19,7 +19,9 @@ DMAP = {
 TASKS = list(DMAP) + list(super_glue.TASK_TO_FN) + ["imdb", "iemocap"]
 
 
-def load_kfold(name: str, fold: int, k: int = 5, seed: int = 42, **data_kwargs: Any):
+def load_kfold(
+    name: str, fold: int, k: int = 5, seed: int = 42, **data_kwargs: Any
+) -> datasets.DatasetDict:
     if name in DMAP:
         return DMAP[name].load_kfold(**data_kwargs, fold=fold, k=k, seed=seed)
     # If we are asking for the first fold just return the default splits.
@@ -30,7 +32,7 @@ def load_kfold(name: str, fold: int, k: int = 5, seed: int = 42, **data_kwargs: 
     raise NotImplementedError
 
 
-def load(name: str, seed: int = 42, **data_kwargs: Any):
+def load(name: str, seed: int = 42, **data_kwargs: Any) -> datasets.DatasetDict:
     if name in DMAP:
         return DMAP[name].load_kfold(**data_kwargs, fold=0, k=5, seed=seed)
     elif name in super_glue.TASKS:
