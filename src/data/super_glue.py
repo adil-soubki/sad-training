@@ -30,7 +30,18 @@ def preprocess_wic(example: dict[str, Any]) -> dict[str, Any]:
 
 
 def preprocess_wsc(example: dict[str, Any]) -> dict[str, Any]:
+    # NOTE: There are two rows duplicated in this data.
+    #   (1) 168 == 216
+    #   (2) 374 == 505
+    # NOTE: Sometimes the coref has whitespace (e.g., "Mr. Singer")
+    #  tkns = example["text"].split()
+    #  for sdx in (2, 1):
+    #      index, text = example[f"span{sdx}_index"], example[f"span{sdx}_text"]
+    #      tkns = tkns[:index] + [text] + tkns[index + len(text.split()):]
+    #      assert tkns[index] == text
+    #      tkns[index] = f"*{text}*"
     example["input_text"] = "\n".join([
+        #  f"text: {' '.join(tkns)}",
         f"text: {example['text']}",
         f"span1: {example['span1_text']}",
         f"span2: {example['span2_text']}"
@@ -55,8 +66,10 @@ def load(task: str, **data_kwargs: Any) -> datasets.DatasetDict:
     data = datasets.load_dataset(
         "super_glue", task,
         cache_dir=f"/tmp/{uuid.uuid4()}",
+        trust_remote_code=True,
         **data_kwargs
-    ).map(TASK_TO_FN[task])
+    ).map(TASK_TO_FN[task], desc="adding input_text column")
     # NOTE: The test splits are unlabeled so we replace test with validation splits.
     data["test"] = data["validation"]
+    del data["validation"]
     return data

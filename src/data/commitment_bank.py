@@ -37,7 +37,7 @@ def load(num_labels: int) -> datasets.Dataset:
         audio=os.path.join(CB_DIR, "audio") + os.sep + df.audio_file
     )[[
         "number", "clip_start", "clip_end", "audio", "audio_file",
-        "cb_target", "cb_val"
+        "cb_target", "cb_val", "turn"
     ]].astype(str)
     # Add tts audio paths.
     voices = []
