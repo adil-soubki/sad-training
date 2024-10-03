@@ -39,14 +39,6 @@ def load(num_labels: int) -> datasets.Dataset:
         "number", "clip_start", "clip_end", "audio", "audio_file",
         "cb_target", "cb_val", "turn"
     ]].astype(str)
-    # Add tts audio paths.
-    voices = []
-    for voice_dir in glob.glob(TTS_DIR + os.sep + "*"):
-        voice = os.path.basename(voice_dir)
-        voices.append(voice)
-        df = df.assign(**{
-            f"audio_{voice}": voice_dir + os.sep + voice + "_" + df.audio_file,
-        })
     # Some rows (exactly 1) do not have a switchboard file to match so number is blank.
     df = df.replace("", np.nan).dropna().astype({"number": int, "cb_val": float})
     # XXX: Convert to 5 label classification for now.
@@ -58,8 +50,6 @@ def load(num_labels: int) -> datasets.Dataset:
     # Create dataset.
     cb = datasets.Dataset.from_pandas(df, preserve_index=False)
     cb = cb.cast_column("audio", datasets.Audio(sampling_rate=16_000))
-    for voice in voices:
-        cb = cb.cast_column(f"audio_{voice}", datasets.Audio(sampling_rate=16_000))
     cb = cb.add_column("opensmile_features", ftrs)
     return cb
 

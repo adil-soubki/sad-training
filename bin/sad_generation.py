@@ -6,15 +6,15 @@ Generate synthetic audio data (SAD) for corpora using OpenAI TTS models.
 Note:
     The output directory is structured as follows.
 
-        path/to/outdir/ [default=./data/tts/]
-        |- corpus1/
+        path/to/outdir/ [default=./data/sad/]
+        |- task1/
         |  |- voice1/
         |  |  |- uid1.wav
         |  |  |- uid2.wav
         |  |  |- ...
         |  |- voice2/
         |  |- ...
-        |- corpus2/
+        |- task2/
         |- ...
 
 Usage Examples:
@@ -22,36 +22,35 @@ Usage Examples:
     $ sad_generation.py -c commitment_bank --voices nova, echo  # Multiple voices.
 """
 import asyncio
+import json
 import os
+from itertools import product
 
 import backoff
 import openai
+from more_itertools import chunked
 from tqdm import tqdm
 
 from src.core.app import harness
 from src.core.context import Context, get_context
+from src.core.path import dirparent
 from src.core import keychain
 from src.data import tasks
 
 from typing import Any
 
 
-CONFIG = {corpus: {"text_column": "input_text"} for corpus in tasks.TASKS}
-for corpus in ("goemotions", "iemocap", "imdb"):
-    CONFIG[corpus]["text_column"] = "text"
-CONFIG["commitment_bank"]["text_column"] = "cb_target"
-
-
 def save_generations(
-        corpus: str,
+        task: str,
         chunk: tuple[str, dict[str, Any]],
         utterances: list[bytes],
         outdir: str
 ) -> None:
     log = get_context().log
-    for chunk, audio in zip(utterances):
-        voice, info = chunk
-        outpath = os.path.join(outdir, corpus, voice, info["uid"] + ".wav")
+    for tup, audio in zip(chunk, utterances):
+        voice, info = tup
+        outpath = os.path.join(outdir, task, voice, f"{info['hid']}.wav")
+        os.makedirs(os.path.dirname(outpath), exist_ok=True)
         with open(outpath, "wb") as fd:
             fd.write(audio)
         log.info("wrote: %s", outpath)
@@ -70,37 +69,66 @@ async def generate_utterance(
     return response.content
 
 
-async def generate_utterances(corpus: str, voices: list[str]) -> None:
+async def generate_utterances(
+    task: str,
+    dataset: str,
+    dataset_kwargs: dict[str, Any],
+    voices: list[str],
+    outdir: str
+) -> None:
     client = openai.AsyncOpenAI()
-    data_dict = tasks.load_kfold(
-        corpus,
-        fold=0,
-        k=5,
-    )
+    dataset_dict = tasks.load_kfold(dataset, **dataset_kwargs, fold=0, k=5)
     data = []
-    for split in data_dict:
-        data += data_dict[split].to_list()
+    for split in dataset_dict:
+        data += dataset_dict[split].to_list()
     for chunk in tqdm(chunked(product(voices, data), 10)):
-        tasks = [
+        futs = [
             generate_utterance(
-                row[CONFIG[corpus]["text_column"]], voice
-            ) for voice, row in batch
+                client, row[tasks.TEXT_COLUMN], voice
+            ) for voice, row in chunk
         ]
-        results = await asyncio.gather(*tasks)
+        utterances = await asyncio.gather(*futs)
+        save_generations(task, chunk, utterances, outdir)
 
 
 def main(ctx: Context) -> None:
+    default_task_config = os.path.join(
+        dirparent(os.path.realpath(__file__), 2),
+        "configs", "sad_training", "tasks.json"
+    )
     default_outdir = os.path.join(
-        dirparent(os.path.realpath(__file__), 2), "data", "tts"
+        dirparent(os.path.realpath(__file__), 2), "data", "sad"
     )
     voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+    ctx.parser.add_argument(
+        "-c", "--task-config",
+        default=default_task_config,
+        help="path to json file containing task specific configuration options."
+    )
+    ctx.parser.add_argument("-t", "--tasks", nargs="+", required=True)
+    ctx.parser.add_argument("--voices", nargs="+", choices=voices, required=True)
     ctx.parser.add_argument("-o", "--outdir", default=default_outdir)
-    ctx.parser.add_argument("-c", "--corpus", choices=tasks.TASKS, required=True)
-    ctx.parser.add_argument("--voices", nargs="+", choices=voices)
     args = ctx.parser.parse_args()
+    # Parse task config.
+    with open(args.task_config, "r") as fd:
+        task_config = json.load(fd)
     # Generate audio asynchronously.
     os.environ["OPENAI_API_KEY"] = keychain.get("IACS")
-    raise NotImplementedError
+    for task in args.tasks:
+        if task not in task_config:
+            parser.error(f"unknown task: {task} {list(task_config)}")
+
+        ctx.log.info("Generating SAD for %s", task)
+        asyncio.run(
+            generate_utterances(
+                task,
+                task_config[task]["dataset"],
+                task_config[task]["dataset_kwargs"],
+                args.voices,
+                args.outdir
+            )
+        )
+    ctx.log.info("COMPLETE")
 
 
 if __name__ == "__main__":

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import dataclasses
 import functools
+import os
 from typing import Any, Callable
 
 import datasets
 
+from ..core.path import dirparent
 from ..data import (
     commitment_bank, fact_bank, fantom, goemotions, iemocap, super_glue, wikiface, wsj
 )
@@ -90,6 +92,13 @@ def add_hids(task: str, ddict: datasets.DatasetDict) -> datasets.DatasetDict:
     """
     import json
     import hashlib
+
+    if task == "commitment_bank":
+        # Already has a unique identifier.
+        def add_hid(row: dict[str, Any]) -> dict[str, Any]:
+            row["hid"] = row["audio_file"].replace(".wav", "")
+            return row
+        return ddict.map(add_hid, desc="adding hids")
     assert all([TEXT_COLUMN in cols for cols in ddict.column_names.values()])
     assert all([LABEL_COLUMN in cols for cols in ddict.column_names.values()])
     # Dump each row to key-sorted json and add sha1 hexdigest.
@@ -115,7 +124,30 @@ def add_hids(task: str, ddict: datasets.DatasetDict) -> datasets.DatasetDict:
     return ddict.map(add_hid, desc="adding hids")
 
 
+# XXX: Use this in bin/sad_generation.py
+# XXX: Expects the task name (as in the config) not the dataset name (as in the
+#   TASKS list in this file). So, fantom wouldn't work, it would need fantom_bin
+#   or fantom_mc. This means it won't currently work for those datasets. I think
+#   the solution is to do away with dataset names altogether but broken for now.
+SAD_DIR = os.path.join(dirparent(os.path.realpath(__file__), 3), "data", "sad")
+def add_sad(task: str, ddict: datasets.DatasetDict) -> datasets.DatasetDict:
+    from glob import glob
+
+    voices = list(map(os.path.basename, glob(os.path.join(SAD_DIR, task, "*"))))
+    def add_voices(row: dict[str, Any]) -> dict[str, Any]:
+        for voice in voices:
+            row[f"audio_{voice}"] = os.path.join(
+                SAD_DIR, task, voice, f"{row['hid']}.wav"
+            )
+        return row
+    ddict = ddict.map(add_voices, desc=f"add sad voices {voices}")
+    for voice in voices:
+        ddict = ddict.cast_column(f"audio_{voice}", datasets.Audio(sampling_rate=16_000))
+    return ddict
+
+
 # TODO: Delete this? We aren't using k-fold cross-validation for this work.
+@postprocess(add_sad)
 @postprocess(add_hids)
 @postprocess(add_consistent_column_names)
 def load_kfold(

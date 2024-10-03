@@ -5,7 +5,7 @@ import logging.handlers
 import os
 import sys
 import time
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from types import ModuleType
 from typing import Any, Optional
 
@@ -27,7 +27,10 @@ def module_from_path(path: str) -> ModuleType:
 class Context:
     def __init__(self) -> None:
         # Initialize argparser.
-        self.parser = ArgumentParser(description=module_from_path(sys.argv[0]).__doc__)
+        self.parser = ArgumentParser(
+            description=module_from_path(sys.argv[0]).__doc__,
+            formatter_class=RawDescriptionHelpFormatter
+        )
         self.parser.add_argument(
             "-v", "--verbose", action="store_true", help="turn on verbose logging"
         )
