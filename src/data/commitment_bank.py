@@ -34,7 +34,7 @@ def load(num_labels: int) -> datasets.Dataset:
         audio=os.path.join(CB_DIR, "audio") + os.sep + df.audio_file
     )[[
         "number", "clip_start", "clip_end", "audio", "audio_file",
-        "cb_target", "cb_val", "turn"
+        "cb_target", "cb_val"
     ]].astype(str)
     # Some rows (exactly 1) do not have a switchboard file to match so number is blank.
     df = df.replace("", np.nan).dropna().astype({"number": int, "cb_val": float})

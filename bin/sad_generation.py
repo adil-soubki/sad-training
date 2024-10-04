@@ -95,8 +95,7 @@ def main(ctx: Context) -> None:
     os.environ["OPENAI_API_KEY"] = keychain.get("IACS")
     for task in args.tasks:
         if task not in tasks_config:
-            parser.error(f"unknown task: {task} {list(tasks_config)}")
-
+            ctx.parser.error(f"unknown task: '{task}' {list(tasks_config)}")
         ctx.log.info("Generating SAD for %s", task)
         asyncio.run(
             generate_utterances(

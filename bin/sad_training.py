@@ -64,12 +64,12 @@ class DataArguments:
         },
     )
     audio_max_length: int = dataclasses.field(
-        default=16,
+        default=30,
         metadata={
             "help": (
                 "The maximum audio length in seconds for feature extraction. "
-		"Sequences longer than this will be truncated, sequences shorter "
-		"will be padded."
+                "Sequences longer than this will be truncated, sequences shorter "
+                "will be padded."
             )
         },
     )
@@ -180,7 +180,7 @@ def run(
     )
     metric_map = {"f1_per_class": f1_per_class}
     metric = metric_map.get(metric, metric)
-    # XXX: Currently not needed.
+    # NOTE: Currently needed.
     training_args.greater_is_better = metric not in ("loss", "eval_loss", "mse", "mae")
     # Load training data.
     task_config = tasks.get_config()[data_args.task]
@@ -203,6 +203,29 @@ def run(
         data = data.rename_column(
             f"audio_{data_args.audio_source}", "audio"
         )
+    # Check if the audio data exceeds the configured audio_max_length and
+    # print a warning if it does.
+    # TODO: Move this to a separate module.
+    if data_args.audio_source is not None:
+        audio_lengths = list(
+            map(
+                lambda audio: len(audio["array"]) / audio["sampling_rate"],
+                itertools.chain(*[data[split]["audio"] for split in data])
+            )
+        )
+        longest_audio_length = max(audio_lengths)
+        if longest_audio_length > data_args.audio_max_length:
+            truncated_lengths = list(
+                filter(lambda l: l > data_args.audio_max_length, audio_lengths)
+            )
+            ctx.log.warning("=" * 80)
+            ctx.log.warning(
+                f"{len(truncated_lengths)} OUT OF {sum(map(len, data.values()))} "
+                f"AUDIO CLIPS ARE LONGER THAN WHISPER SUPPORTS "
+                f"({data_args.audio_max_length} seconds) AND WILL BE TRUNCATED."
+            )
+            ctx.log.warning(f"TRUNCATED LENGTHS: {truncated_lengths}")
+            ctx.log.warning("=" * 80)
     # Preprocess training data.
     feature_extractor = tf.AutoFeatureExtractor.from_pretrained(
         model_args.audio_model_name_or_path
@@ -211,7 +234,8 @@ def run(
         model_args.text_model_name_or_path
     ) if model_args.text_model_name_or_path else None
     assert not tokenizer or (tokenizer.model_max_length >= data_args.text_max_length)
-    data = data.cast_column("audio", datasets.Audio(sampling_rate=16_000))
+    if data_args.audio_source is not None:
+        data = data.cast_column("audio", datasets.Audio(sampling_rate=16_000))
     def preprocess_fn(examples):
         dummy = [[0]] * len(examples[list(examples.keys())[0]])
         # Label processing.
@@ -228,9 +252,8 @@ def run(
             truncation=True
         ) if tokenizer else {"input_ids": dummy, "attention_mask": dummy}
         # Audio processing.
-        audio_arrays = [x["array"] for x in examples["audio"]]
         inputs |= feature_extractor(
-            audio_arrays,
+            [x["array"] for x in examples["audio"]],
             sampling_rate=getattr(feature_extractor, "sampling_rate", 16_000),
             padding="max_length",
             max_length=data_args.audio_max_length * 16_000,
@@ -248,6 +271,7 @@ def run(
         "attention_mask": "text_attention_mask",
         "input_values": "audio_input_values",
     })
+    # TODO: Check how often text_max_length is exceeded.
     train_dataset, eval_dataset = data["train"], data["test"]
     if data_args.max_train_samples is not None:
         max_train_samples = min(len(train_dataset), data_args.max_train_samples)
