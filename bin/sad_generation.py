@@ -18,11 +18,10 @@ Note:
         |- ...
 
 Usage Examples:
-    $ sad_generation.py -c commitment_bank --voices nova        # Basic usage.
-    $ sad_generation.py -c commitment_bank --voices nova, echo  # Multiple voices.
+    $ sad_generation.py -t commitment_bank --voices nova        # Basic usage.
+    $ sad_generation.py -t commitment_bank --voices nova, echo  # Multiple voices.
 """
 import asyncio
-import json
 import os
 from itertools import product
 
@@ -33,7 +32,6 @@ from tqdm import tqdm
 
 from src.core.app import harness
 from src.core.context import Context, get_context
-from src.core.path import dirparent
 from src.core import keychain
 from src.data import tasks
 
@@ -49,7 +47,7 @@ def save_generations(
     log = get_context().log
     for tup, audio in zip(chunk, utterances):
         voice, info = tup
-        outpath = os.path.join(outdir, task, voice, f"{info['hid']}.wav")
+        outpath = os.path.join(outdir, task, voice, f"{info['hexdigest']}.wav")
         os.makedirs(os.path.dirname(outpath), exist_ok=True)
         with open(outpath, "wb") as fd:
             fd.write(audio)
@@ -69,22 +67,17 @@ async def generate_utterance(
     return response.content
 
 
-async def generate_utterances(
-    task: str,
-    dataset: str,
-    dataset_kwargs: dict[str, Any],
-    voices: list[str],
-    outdir: str
-) -> None:
+async def generate_utterances(task: str, voices: list[str], outdir: str) -> None:
     client = openai.AsyncOpenAI()
-    dataset_dict = tasks.load_kfold(dataset, **dataset_kwargs, fold=0, k=5)
+    text_column = tasks.get_config()[task].text_column
+    dataset_dict = tasks.load(task)
     data = []
     for split in dataset_dict:
         data += dataset_dict[split].to_list()
     for chunk in tqdm(chunked(product(voices, data), 10)):
         futs = [
             generate_utterance(
-                client, row[tasks.TEXT_COLUMN], voice
+                client, row[text_column], voice
             ) for voice, row in chunk
         ]
         utterances = await asyncio.gather(*futs)
@@ -92,38 +85,22 @@ async def generate_utterances(
 
 
 def main(ctx: Context) -> None:
-    default_task_config = os.path.join(
-        dirparent(os.path.realpath(__file__), 2),
-        "configs", "sad_training", "tasks.json"
-    )
-    default_outdir = os.path.join(
-        dirparent(os.path.realpath(__file__), 2), "data", "sad"
-    )
     voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
-    ctx.parser.add_argument(
-        "-c", "--task-config",
-        default=default_task_config,
-        help="path to json file containing task specific configuration options."
-    )
     ctx.parser.add_argument("-t", "--tasks", nargs="+", required=True)
     ctx.parser.add_argument("--voices", nargs="+", choices=voices, required=True)
-    ctx.parser.add_argument("-o", "--outdir", default=default_outdir)
+    ctx.parser.add_argument("-o", "--outdir", default=tasks.SAD_DIR)
     args = ctx.parser.parse_args()
-    # Parse task config.
-    with open(args.task_config, "r") as fd:
-        task_config = json.load(fd)
     # Generate audio asynchronously.
+    tasks_config = tasks.get_config()
     os.environ["OPENAI_API_KEY"] = keychain.get("IACS")
     for task in args.tasks:
-        if task not in task_config:
-            parser.error(f"unknown task: {task} {list(task_config)}")
+        if task not in tasks_config:
+            parser.error(f"unknown task: {task} {list(tasks_config)}")
 
         ctx.log.info("Generating SAD for %s", task)
         asyncio.run(
             generate_utterances(
                 task,
-                task_config[task]["dataset"],
-                task_config[task]["dataset_kwargs"],
                 args.voices,
                 args.outdir
             )

@@ -1,0 +1,70 @@
+{
+    "boolq": {
+        "dataset": "boolq",
+        "dataset_kwargs": {},
+        "text_column": "input_text",
+        "label_column": "label"
+    },
+    "commitment_bank": {
+        "dataset": "commitment_bank",
+        "dataset_kwargs": {"num_labels": 5},
+        "text_column": "cb_target",
+        "label_column": "cb_val_float"
+    },
+    "fantom_bin": {
+        "dataset": "fantom",
+        "dataset_kwargs": {
+            "conversation_input_type": "short",
+            "question_type": "all",
+            "answer_type": "binary"
+        },
+        "text_column": "input_text",
+        "label_column": "label_name"
+    },
+    "fantom_mc": {
+        "dataset": "fantom",
+        "dataset_kwargs": {
+            "conversation_input_type": "short",
+            "question_type": "all",
+            "answer_type": "multiple-choice"
+        },
+        "text_column": "input_text",
+        "label_column": "label_name"
+    },
+    "goemotions": {
+        "dataset": "goemotions",
+        "dataset_kwargs": {"label_type": "original", "multilabel": false},
+        "text_column": "text",
+        "label_column": "label_name"
+    },
+    "goemotions_ekman": {
+        "dataset": "goemotions",
+        "dataset_kwargs": {"label_type": "ekman", "multilabel": false},
+        "text_column": "text",
+        "label_column": "label_name"
+    },
+    "iemocap": {
+        "dataset": "iemocap",
+        "dataset_kwargs": {},
+        "text_column": "text",
+        "label_column": "label"
+    },
+    "imdb": {
+        "dataset": "imdb",
+        "dataset_kwargs": {},
+        "text_column": "text",
+        "label_column": "label"
+    },
+    "wsc": {
+        "dataset": "wsc",
+        "dataset_kwargs": {},
+        "text_column": "input_text",
+        "label_column": "label"
+    },
+    "wic": {
+        "dataset": "wic",
+        "dataset_kwargs": {},
+        "text_column": "input_text",
+        "label_column": "label"
+    }
+}

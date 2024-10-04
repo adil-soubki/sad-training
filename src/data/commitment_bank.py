@@ -21,9 +21,6 @@ CB_TO_5_CLS = {
     2: 3,
     3: 4,
 }
-TTS_DIR = os.path.join(
-    dirparent(os.path.realpath(__file__), 3), "openai-tts", "audio", "clipped", "cb"
-)
 
 
 def load(num_labels: int) -> datasets.Dataset:

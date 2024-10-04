@@ -21,6 +21,7 @@ Usage Examples:
     $ sad_training.py path/to/config.json -c path/to/tasks.json
 """
 import argparse
+import contextlib
 import dataclasses
 import hashlib
 import json
@@ -72,10 +73,7 @@ class DataArguments:
             )
         },
     )
-    dataset: str = dataclasses.field(default=None)
-    dataset_kwargs: dict[Any, Any] = dataclasses.field(default_factory=dict)
-    text_column: str = dataclasses.field(default=None)
-    label_column: str = dataclasses.field(default=None)
+    task: str = dataclasses.field(default=None)
     audio_sources: list[str] = dataclasses.field(
         default_factory=list,
         metadata={
@@ -108,8 +106,7 @@ class DataArguments:
     )
 
     def __post_init__(self):
-        assert self.text_column is not None
-        assert self.label_column is not None
+        assert self.task is not None, "Specify task"
         assert self.audio_source is None, "Set audio_sources instead"
         assert len(self.audio_sources) > 0, (
             "Should have at least one audio source. Use [None] for text-only training"
@@ -134,7 +131,7 @@ def update_metrics(
     run_id = hashlib.md5(str(sorted(args.items())).encode("utf-8")).hexdigest()
     run_id += f"-{data_args.data_fold}"
     args["data_fold"] = data_args.data_fold
-    logger.info("\nRUN_ID: %s [%s]", run_id, data_args.dataset)
+    logger.info("\nRUN_ID: %s [%s]", run_id, data_args.task)
     output_dir = os.path.join(dirparent(training_args.output_dir, 2), "runs")
     os.makedirs(output_dir, exist_ok=True)
     # Compute the new results.
@@ -186,23 +183,27 @@ def run(
     # XXX: Currently not needed.
     training_args.greater_is_better = metric not in ("loss", "eval_loss", "mse", "mae")
     # Load training data.
-    data = tasks.load_kfold(
-        data_args.dataset,
-        **data_args.dataset_kwargs,
+    task_config = tasks.get_config()[data_args.task]
+    data = tasks.load(
+        data_args.task,
         fold=data_args.data_fold,
         k=data_args.data_num_folds,
         seed=training_args.data_seed
     ).rename_columns({
-        data_args.label_column: "label"
+        task_config.label_column: "label"
     })
+    label_list = sorted(set(itertools.chain(*[data[split]["label"] for split in data])))
+    model_args.num_labels = len(label_list)
     if data_args.do_regression:
         model_args.num_labels = 1  # NOTE: Just used to stratify.
     if data_args.audio_source not in (None, "gold"):
-        data = data.remove_columns("audio").rename_column(
+        # Remove (gold) "audio" column if it exists.
+        with contextlib.suppress(ValueError):
+            data = data.remove_columns("audio")
+        data = data.rename_column(
             f"audio_{data_args.audio_source}", "audio"
         )
     # Preprocess training data.
-    label_list = sorted(set(itertools.chain(*[data[split]["label"] for split in data])))
     feature_extractor = tf.AutoFeatureExtractor.from_pretrained(
         model_args.audio_model_name_or_path
     ) if model_args.audio_model_name_or_path else None
@@ -221,7 +222,7 @@ def run(
             )
         # Text processing.
         inputs = tokenizer(
-            examples[data_args.text_column],
+            examples[task_config.text_column],
             padding="max_length",
             max_length=data_args.text_max_length,
             truncation=True
@@ -237,6 +238,8 @@ def run(
         ) if feature_extractor else {"input_values": dummy}
         if "input_features" in inputs:  # Whisper names them differently.
             inputs["input_values"] = inputs.pop("input_features")
+        if not model_args.use_opensmile_features:
+            inputs["opensmile_features"] = dummy
         # Return inputs.
         return inputs
     data = data.map(preprocess_fn, batched=True, batch_size=16)
@@ -329,7 +332,9 @@ def main(ctx: Context) -> None:
     for task in args.tasks or list(task_config):
         if task not in task_config:
             parser.error(f"unknown task: {task} {list(task_config)}")
-        cfg = copy(config) | task_config[task]
+        if task not in tasks.get_config():
+            parser.error(f"unknown task: {task} {list(tasks.get_config())}")
+        cfg = copy(config) | task_config[task] | {"task": task}
         cfg["output_dir"] = os.path.join(cfg["output_dir"], task)
         hf_parser = tf.HfArgumentParser((ModelArguments, DataArguments, tf.TrainingArguments))
         model_args, data_args, training_args = hf_parser.parse_dict(cfg)
