@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import getpass
 import uuid
 from typing import Any
 
@@ -65,7 +66,9 @@ def load(task: str, **data_kwargs: Any) -> datasets.DatasetDict:
     #      I solved this by just directing the cache directory to a random tmp path.
     data = datasets.load_dataset(
         "super_glue", task,
-        cache_dir=f"/tmp/{uuid.uuid4()}",
+        # XXX: /tmp/ is full on the cluster so until this is fixed we put it here.
+        #  cache_dir=f"/tmp/{uuid.uuid4()}",
+        cache_dir=f"/home/{getpass.getuser()}/scratch/tmp/{uuid.uuid4()}",
         trust_remote_code=True,
         **data_kwargs
     ).map(TASK_TO_FN[task], desc="adding input_text column")
