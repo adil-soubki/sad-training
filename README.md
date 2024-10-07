@@ -1,2 +1,2 @@
-# Synthetical Audio Data (SAD) Training
+# Synthetic Audio Data (SAD) Training
 Work in progress.
