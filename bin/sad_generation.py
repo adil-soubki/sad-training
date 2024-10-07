@@ -17,13 +17,14 @@ Note:
         |- task2/
         |- ...
 
+    It will only generate files which do not already exist.
+
 Usage Examples:
     $ sad_generation.py -t commitment_bank --voices nova        # Basic usage.
     $ sad_generation.py -t commitment_bank --voices nova, echo  # Multiple voices.
 """
 import asyncio
 import os
-from itertools import product
 
 import backoff
 import openai
@@ -40,14 +41,15 @@ from typing import Any
 
 def save_generations(
         task: str,
-        chunk: tuple[str, dict[str, Any]],
+        voice: str,
+        chunk: list[dict[str, Any]],
         utterances: list[bytes],
         outdir: str
 ) -> None:
     log = get_context().log
-    for tup, audio in zip(chunk, utterances):
-        voice, info = tup
-        outpath = os.path.join(outdir, task, voice, f"{info['hexdigest']}.wav")
+    assert len(chunk) == len(utterances)
+    for row, audio in zip(chunk, utterances):
+        outpath = os.path.join(outdir, task, voice, f"{row['hexdigest']}.wav")
         os.makedirs(os.path.dirname(outpath), exist_ok=True)
         with open(outpath, "wb") as fd:
             fd.write(audio)
@@ -67,6 +69,23 @@ async def generate_utterance(
     return response.content
 
 
+def get_missing_data(
+        data: list[dict[str, Any]], task: str, voice: str, outdir: str
+) -> list[dict[str, Any]]:
+    log = get_context().log
+    def sad_is_missing(row: dict[str, Any]) -> bool:
+        # TODO: Needs to match path in save_generations. Make shared method?
+        return not os.path.exists(
+            os.path.join(outdir, task, voice, f"{row['hexdigest']}.wav")
+        )
+    missing_data = list(filter(sad_is_missing, data))
+    log.info(
+        f"{task} [voice={voice}] is missing sad for "
+        f"{len(missing_data)} / {len(data)} hexdigests."
+    )
+    return missing_data
+
+
 async def generate_utterances(task: str, voices: list[str], outdir: str) -> None:
     client = openai.AsyncOpenAI()
     text_column = tasks.get_config()[task].text_column
@@ -74,14 +93,16 @@ async def generate_utterances(task: str, voices: list[str], outdir: str) -> None
     data = []
     for split in dataset_dict:
         data += dataset_dict[split].to_list()
-    for chunk in tqdm(chunked(product(voices, data), 10)):
-        futs = [
-            generate_utterance(
-                client, row[text_column], voice
-            ) for voice, row in chunk
-        ]
+    for voice in voices:
+        missing_data = get_missing_data(data, task, voice, outdir)
+        for chunk in tqdm(chunked(missing_data, 10)):
+            futs = [
+                generate_utterance(
+                    client, row[text_column], voice
+                ) for row in chunk
+            ]
         utterances = await asyncio.gather(*futs)
-        save_generations(task, chunk, utterances, outdir)
+        save_generations(task, voice, chunk, utterances, outdir)
 
 
 def main(ctx: Context) -> None:
@@ -104,7 +125,6 @@ def main(ctx: Context) -> None:
                 args.outdir
             )
         )
-    ctx.log.info("COMPLETE")
 
 
 if __name__ == "__main__":
