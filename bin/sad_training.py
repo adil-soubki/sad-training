@@ -42,7 +42,7 @@ from src.core.context import Context, get_context
 from src.core.app import harness
 from src.core.path import dirparent
 from src.core.evaluate import f1_per_class
-from src.data import tasks
+from src.data import tasks, validation
 from src.models.multimodal_classifier import MultimodalClassifier, ModelArguments
 
 
@@ -203,29 +203,16 @@ def run(
         data = data.rename_column(
             f"audio_{data_args.audio_source}", "audio"
         )
-    # Check if the audio data exceeds the configured audio_max_length and
-    # print a warning if it does.
-    # TODO: Move this to a separate module.
+    # Check if the audio/text data exceeds the configured audio/text_max_length
+    # and print a warning if it does.
     if data_args.audio_source is not None:
-        audio_lengths = list(
-            map(
-                lambda audio: len(audio["array"]) / audio["sampling_rate"],
-                itertools.chain(*[data[split]["audio"] for split in data])
-            )
+        validation.warn_on_audio_length(data, data_args.audio_max_length)
+    if model_args.text_model_name_or_path:
+        validation.warn_on_text_length(
+            data, data_args.task,
+            data_args.text_max_length,
+            model_args.text_model_name_or_path
         )
-        longest_audio_length = max(audio_lengths)
-        if longest_audio_length > data_args.audio_max_length:
-            truncated_lengths = list(
-                filter(lambda l: l > data_args.audio_max_length, audio_lengths)
-            )
-            ctx.log.warning("=" * 80)
-            ctx.log.warning(
-                f"{len(truncated_lengths)} OUT OF {sum(map(len, data.values()))} "
-                f"AUDIO CLIPS ARE LONGER THAN WHISPER SUPPORTS "
-                f"({data_args.audio_max_length} seconds) AND WILL BE TRUNCATED."
-            )
-            ctx.log.warning(f"TRUNCATED LENGTHS: {truncated_lengths}")
-            ctx.log.warning("=" * 80)
     # Preprocess training data.
     feature_extractor = tf.AutoFeatureExtractor.from_pretrained(
         model_args.audio_model_name_or_path
