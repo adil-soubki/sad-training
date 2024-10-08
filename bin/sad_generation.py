@@ -101,8 +101,8 @@ async def generate_utterances(task: str, voices: list[str], outdir: str) -> None
                     client, row[text_column], voice
                 ) for row in chunk
             ]
-        utterances = await asyncio.gather(*futs)
-        save_generations(task, voice, chunk, utterances, outdir)
+            utterances = await asyncio.gather(*futs)
+            save_generations(task, voice, chunk, utterances, outdir)
 
 
 def main(ctx: Context) -> None:
