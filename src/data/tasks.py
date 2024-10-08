@@ -76,6 +76,13 @@ def postprocess(
     return decorator
 
 
+# XXX: I think the hexdigest should not use the label column at all when
+#   hashing. That or we should add another hexdigest that just uses the
+#   text column. The reason for this is that what actually matters is what
+#   we send to the tts system and for tasks that have multiple versions
+#   with the same text and different labels (e.g., goemotions and
+#   goemotions_ekman) they should share audio files instead of us double
+#   paying for generations.
 def add_hexdigests(task: str, ddict: DatasetDict) -> DatasetDict:
     """
     Adds hexdigests (sha1 hash ids) to a DatasetDict.

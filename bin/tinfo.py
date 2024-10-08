@@ -86,6 +86,11 @@ def main(ctx: Context) -> None:
             reduce(operator.or_, [df[f"{et}_badness"] > 0 for et in error_types])
         ])
         ctx.log.info(f"{'[ ' + task + ' ]':=^80}")
+        num_chars, avg_chars = df.text_num_chars.sum(), df.text_num_chars.mean()
+        num_tokens, avg_tokens = df.text_num_tokens.sum(), df.text_num_tokens.mean()
+        ctx.log.info(f"character count: {num_chars:,} (avg={avg_chars:,.0f})")
+        ctx.log.info(f"token count: {num_tokens:,} (avg={avg_tokens:,.0f})")
+        ctx.log.info(f"OpenAI cost/voice: ${df.text_num_chars.sum() * 3e-5:,.2f}")
         ctx.log.info(
             f"{num_errors} / {num_entries} entries contain an error "
             f"({num_errors / num_entries:.1%})"
