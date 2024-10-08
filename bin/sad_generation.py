@@ -56,7 +56,7 @@ def save_generations(
         log.info("wrote: %s", outpath)
 
 
-@backoff.on_exception(backoff.expo, openai.RateLimitError)
+@backoff.on_exception(backoff.expo, (openai.RateLimitError, openai.APIConnectionError))
 async def generate_utterance(
     client: openai.AsyncOpenAI, text: str, voice: str
 ) -> bytes:
@@ -95,7 +95,7 @@ async def generate_utterances(task: str, voices: list[str], outdir: str) -> None
         data += dataset_dict[split].to_list()
     for voice in voices:
         missing_data = get_missing_data(data, task, voice, outdir)
-        for chunk in tqdm(chunked(missing_data, 10)):
+        for chunk in tqdm(list(chunked(missing_data, n=60))):
             futs = [
                 generate_utterance(
                     client, row[text_column], voice
