@@ -249,7 +249,7 @@ def run(
             examples[task_config.text_column],
             padding="max_length",
             max_length=data_args.text_max_length,
-            truncation=True
+            truncation=True  # XXX: Should be False?
         ) if tokenizer else {"input_ids": dummy, "attention_mask": dummy}
         # Audio processing.
         inputs |= feature_extractor(
@@ -257,7 +257,7 @@ def run(
             sampling_rate=getattr(feature_extractor, "sampling_rate", 16_000),
             padding="max_length",
             max_length=data_args.audio_max_length * 16_000,
-            truncation=True
+            truncation=True  # XXX: Should be False?
         ) if feature_extractor else {"input_values": dummy}
         if "input_features" in inputs:  # Whisper names them differently.
             inputs["input_values"] = inputs.pop("input_features")

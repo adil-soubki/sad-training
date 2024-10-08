@@ -7,7 +7,9 @@ Usage Examples:
     $ tinfo.py                     # Basic usage.
     $ tinfo.py -t commitment_bank  # Single task.
 """
+import logging
 import operator
+import warnings
 from functools import reduce
 from typing import Any
 
@@ -22,12 +24,12 @@ from src.data import tasks
 from src.data.utils import progress_bar_disabled
 
 
-def get_task_df(task: str, text_model: str) -> pd.DataFrame:
+def get_task_df(task: str, text_model: str, filtered: bool) -> pd.DataFrame:
     ret = []
     cfg = tasks.get_config()[task]
     # Tokenize the dataset.
     tokenizer = tf.AutoTokenizer.from_pretrained(text_model)
-    data = tasks.load(task, fold=0, k=5)
+    data = tasks.load(task, fold=0, k=5, filtered=filtered)
     def tokenize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return tokenizer(
             rows[cfg.text_column],
@@ -66,12 +68,19 @@ def main(ctx: Context) -> None:
         "-t", "--tasks", nargs="+", choices=list(cfg), default=default_tasks
     )
     ctx.parser.add_argument("-m", "--text-model", default=default_text_model)
+    ctx.parser.add_argument("-f", "--filtered", action="store_true")
     args = ctx.parser.parse_args()
+    # Set up logging.
+    tf.logging.set_verbosity_error()
+    warnings.filterwarnings(
+        action="ignore",
+        message="`resume_download` is deprecated and will be removed"
+    )
     # Check task data for errors. 
     error_types = ("tts_character_limit", "text_model_token_limit")
     for task in args.tasks:
         with progress_bar_disabled():
-            df = get_task_df(task, args.text_model)
+            df = get_task_df(task, args.text_model, args.filtered)
         num_entries = len(df)
         num_errors = len(df[
             reduce(operator.or_, [df[f"{et}_badness"] > 0 for et in error_types])

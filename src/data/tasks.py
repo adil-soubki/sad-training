@@ -136,9 +136,45 @@ def add_sad(task: str, ddict: DatasetDict) -> DatasetDict:
     return ddict
 
 
-@postprocess(add_sad)
+def filter_by_char_limit(
+    task: str, ddict: DatasetDict, char_limit: int = 4096
+) -> DatasetDict:
+    cfg = get_config()[task]
+    def is_below_char_limit(row: dict[str, Any]) -> bool:
+        return len(row[cfg.text_column]) < char_limit
+    return ddict.filter(
+        is_below_char_limit,
+        desc=f"filter by char_limit ({char_limit})"
+    )
+
+
+def filter_by_token_limit(
+    task: str, ddict: DatasetDict, text_model: str = "google-bert/bert-base-uncased"
+) -> DatasetDict:
+    import transformers as tf
+
+    cfg = get_config()[task]
+    tokenizer = tf.AutoTokenizer.from_pretrained(text_model)
+    token_limit = tokenizer.model_max_length
+    def is_below_token_limit(row: dict[str, Any]) -> bool:
+        token_ids = tokenizer(
+            row[cfg.text_column], padding=False, truncation=False
+        )["input_ids"]
+        return len(token_ids) < token_limit
+    verbosity_og = tf.logging.get_verbosity()
+    tf.logging.set_verbosity_error()
+    ret = ddict.filter(
+        is_below_token_limit,
+        desc=f"filter by token_limit ({token_limit})"
+    )
+    tf.logging.set_verbosity(verbosity_og)
+    return ret
+
+
 @postprocess(add_hexdigests)
-def load(task: str, fold: int = 0, k: int = 5, seed: int = 42) -> DatasetDict:
+def load_unfiltered(
+    task: str, fold: int = 0, k: int = 5, seed: int = 42
+) -> DatasetDict:
     if task not in get_config():
         raise ValueError(f"unknown task: '{task}' not in {list(get_config())}")
     task_config = get_config()[task]
@@ -149,3 +185,20 @@ def load(task: str, fold: int = 0, k: int = 5, seed: int = 42) -> DatasetDict:
         k=k,
         seed=seed
     )
+
+
+@postprocess(filter_by_token_limit)
+@postprocess(filter_by_char_limit)
+def load_filtered(
+    task: str, fold: int = 0, k: int = 5, seed: int = 42
+) -> DatasetDict:
+    return load_unfiltered(task, fold, k, seed)
+
+
+@postprocess(add_sad)
+def load(
+    task: str, fold: int = 0, k: int = 5, seed: int = 42, filtered: bool = True
+):
+    if filtered:
+        return load_filtered(task, fold, k, seed)
+    return load_unfiltered(task, fold, k, seed)

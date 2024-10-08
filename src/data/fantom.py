@@ -129,7 +129,8 @@ def build_data(resource, directory='data'):
         mark_built(built_location, resource.version)
         print("Successfully built dataset at {}".format(built_location))
     else:
-        print("Already built at {}. version {}".format(file_path, resource.version))
+        # NOTE: Commenting since it doesn't really need to be printed.
+        #  print("Already built at {}. version {}".format(file_path, resource.version))
         built_location = file_path
 
     return built_location
