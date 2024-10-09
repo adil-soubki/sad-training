@@ -16,7 +16,7 @@ from ..data import (
 CMAP = {
     "commitment_bank": commitment_bank,
     "commitment_bank_text_only": commitment_bank_text_only,
-    "fact_bank": fact_bank,  # NOTE: Not done.
+    "fact_bank": fact_bank,
     "fantom": fantom,
     "wikiface": wikiface,  # XXX: Delete me.
     "wsj": wsj,  # XXX: Delete me.
