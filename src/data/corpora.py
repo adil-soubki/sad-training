@@ -30,6 +30,8 @@ CORPORA = (
 
 # TODO: Move kfold splitting logic out of the corpus modules. Only require
 #   modules to implement a load function that returns a cannonical split.
+# TODO: This logic should work automatically using the task config. Right now
+#   it requires updating every time a new corpus is added.
 # TODO: Check that modules have the right methods implemented.
 # NOTE: https://stackoverflow.com/a/8719100
 def load(

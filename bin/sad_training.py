@@ -347,6 +347,9 @@ def main(ctx: Context) -> None:
             parser.error(f"unknown task: {task} {list(tasks.get_config())}")
         cfg = copy(config) | task_config[task] | {"task": task}
         cfg["output_dir"] = os.path.join(cfg["output_dir"], task)
+        if not cfg["audio_sources"]:
+            ctx.log.info(f"No audio sources configured for {task}. Skipping.")
+            continue  # Skip datasets with no audio sources configured.
         hf_parser = tf.HfArgumentParser((ModelArguments, DataArguments, tf.TrainingArguments))
         model_args, data_args, training_args = hf_parser.parse_dict(cfg)
         # Run the training loop.
