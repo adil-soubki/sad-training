@@ -158,7 +158,8 @@ class MultimodalClassifier(torch.nn.Module):
             opensmile_logits = torch.tensor([]).to(device)
             if self.config.use_opensmile_features:
                 opensmile_logits = self.opensmile_classification_head(opensmile_features)
-            logits = torch.cat([text_logits, audio_logits, opensmile_logits]).mean()
+            logits = (text_logits, audio_logits, opensmile_logits)
+            logits = torch.stack([lgts for lgts in logits if lgts.numel()]).mean(dim=0)
         else:
             raise ValueError
         # Compute loss.
