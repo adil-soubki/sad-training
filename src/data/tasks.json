@@ -11,6 +11,18 @@
         "text_column": "cb_target",
         "label_column": "cb_val_float"
     },
+    "commitment_bank_text_only": {
+        "dataset": "commitment_bank_text_only",
+        "dataset_kwargs": {},
+        "text_column": "text",
+        "label_column": "label"
+    },
+    "fact_bank": {
+        "dataset": "fact_bank",
+        "dataset_kwargs": {},
+        "text_column": "full_span",
+        "label_column": "label"
+    },
     "fantom_bin": {
         "dataset": "fantom",
         "dataset_kwargs": {
