@@ -17,6 +17,12 @@
         "text_column": "text",
         "label_column": "label"
     },
+    "fact_bank": {
+        "dataset": "fact_bank",
+        "dataset_kwargs": {},
+        "text_column": "full_span",
+        "label_column": "label"
+    },
     "fantom_bin": {
         "dataset": "fantom",
         "dataset_kwargs": {
@@ -71,12 +77,6 @@
         "dataset": "wic",
         "dataset_kwargs": {},
         "text_column": "input_text",
-        "label_column": "label"
-    },
-    "factbank": {
-        "dataset": "factbank",
-        "dataset_kwargs": {},
-        "text_column": "fb_span",
         "label_column": "label"
     }
 }

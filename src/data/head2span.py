@@ -1,15 +1,17 @@
-import spacy
+# -*- coding: utf-8 -*-
 import re
+from functools import lru_cache
 
-'''
-Head2Span stuff
-'''
-def load_spacy(spacy_model="en_core_web_sm"):
-    global nlp
-    nlp = spacy.load(spacy_model, exclude=["lemmatizer", "ner", "textcat"])
+import spacy
 
 
-load_spacy()
+@lru_cache
+def get_spacy(model: str = "en_core_web_sm") -> spacy.Language:
+    try:
+        return spacy.load(model)
+    except:
+        spacy.cli.download(model)
+        return spacy.load(model)
 
 
 def get_final_span(syntactic_head_token, fb_head_token):
@@ -62,7 +64,6 @@ def get_head_span(head_token_offset_start, head_token_offset_end, doc):
 
     # postprocessing for CC and CONJ -- exclude child arcs with CC or CONJ
     span_start, span_end = get_final_span(syntactic_head_token, fb_head_token)
-
     return span_start, span_end
 
 
@@ -74,16 +75,11 @@ def get_span_indices(word, text):
 
 
 def get_text_span(target, text):
-
-    doc = nlp(text)
-
+    doc = get_spacy("en_core_web_sm")(text)
     span_ixs = get_span_indices(target, text)
-
     try:
         s, e = get_head_span(*span_ixs, doc)
         span = text[s:e]
         return span
     except:
         return False
-
-

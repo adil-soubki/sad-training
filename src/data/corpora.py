@@ -8,13 +8,14 @@ import datasets
 
 from ..core.path import dirparent
 from ..data import (
-    commitment_bank, fact_bank, fantom, goemotions,
-    iemocap, super_glue, wikiface, wsj
+    commitment_bank, commitment_bank_text_only, fact_bank,
+    fantom, goemotions, iemocap, super_glue, wikiface, wsj
 )
 
 
 CMAP = {
     "commitment_bank": commitment_bank,
+    "commitment_bank_text_only": commitment_bank_text_only,
     "fact_bank": fact_bank,  # NOTE: Not done.
     "fantom": fantom,
     "wikiface": wikiface,  # XXX: Delete me.
@@ -27,6 +28,10 @@ CORPORA = (
 )
 
 
+# TODO: Move kfold splitting logic out of the corpus modules. Only require
+#   modules to implement a load function that returns a cannonical split.
+# TODO: Check that modules have the right methods implemented.
+# NOTE: https://stackoverflow.com/a/8719100
 def load(
     corpus: str, fold: int = 0, k: int = 5, seed: int = 42, **data_kwargs: Any
 ) -> datasets.DatasetDict:
