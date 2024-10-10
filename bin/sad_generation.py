@@ -35,9 +35,12 @@ from src.core.app import harness
 from src.core.context import Context, get_context
 from src.core import keychain
 from src.data import tasks
+import tempfile
+import shutil
 
 from typing import Any
-
+import subprocess
+import glob
 
 def save_generations(
         task: str,
@@ -85,6 +88,41 @@ def get_missing_data(
     )
     return missing_data
 
+def generate_matcha_utterances(task: str, outdir: str) -> None:
+    text_column = tasks.get_config()[task].text_column
+    dataset_dict = tasks.load(task)
+    data = []
+    for split in dataset_dict:
+        data += dataset_dict[split].to_list()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create temporary input file
+        temp_input_file = os.path.join(temp_dir, f'{task}.txt')
+        with open(temp_input_file, 'w') as f:
+            for item in data:
+                f.write(f"{item[text_column]}\n")
+        
+        # Run matcha-tts with temporary output directory
+        temp_output_dir = os.path.join(temp_dir, f'{task}_matcha')
+        subprocess.run(['matcha-tts', '--file', temp_input_file, '--output_folder', temp_output_dir], capture_output=True, text=True)
+        
+        # Process and move generated files
+        hex_digests = [item['hexdigest'] for item in data]
+        wav_files = glob.glob(os.path.join(temp_output_dir, '*.wav'))
+        
+        log = get_context().log
+        for hexdigest, wav_file in zip(hex_digests, wav_files):
+            outpath = os.path.join(outdir, task, "matcha", f"{hexdigest}.wav")
+            os.makedirs(os.path.dirname(outpath), exist_ok=True)
+            shutil.copy2(wav_file, outpath)
+            log.info("wrote: %s", outpath)
+
+        # Clean up PNG files in the current directory
+        current_dir = os.getcwd()
+        png_files = glob.glob(os.path.join(current_dir, '*.png'))
+        for png_file in png_files:
+            os.remove(png_file)
+            log.info(f"Removed: {png_file}")
 
 async def generate_utterances(task: str, voices: list[str], outdir: str) -> None:
     client = openai.AsyncOpenAI()
@@ -94,19 +132,22 @@ async def generate_utterances(task: str, voices: list[str], outdir: str) -> None
     for split in dataset_dict:
         data += dataset_dict[split].to_list()
     for voice in voices:
-        missing_data = get_missing_data(data, task, voice, outdir)
-        for chunk in tqdm(list(chunked(missing_data, n=60))):
-            futs = [
-                generate_utterance(
-                    client, row[text_column], voice
-                ) for row in chunk
-            ]
-            utterances = await asyncio.gather(*futs)
-            save_generations(task, voice, chunk, utterances, outdir)
+        if voice == "matcha":
+            generate_matcha_utterances(task, outdir)
+        else:
+            missing_data = get_missing_data(data, task, voice, outdir)
+            for chunk in tqdm(list(chunked(missing_data, n=60))):
+                futs = [
+                    generate_utterance(
+                        client, row[text_column], voice
+                    ) for row in chunk
+                ]
+                utterances = await asyncio.gather(*futs)
+                save_generations(task, voice, chunk, utterances, outdir)
 
 
 def main(ctx: Context) -> None:
-    voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+    voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "matcha"]
     ctx.parser.add_argument("-t", "--tasks", nargs="+", required=True)
     ctx.parser.add_argument("--voices", nargs="+", choices=voices, required=True)
     ctx.parser.add_argument("-o", "--outdir", default=tasks.SAD_DIR)
