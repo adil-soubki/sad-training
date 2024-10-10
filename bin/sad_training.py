@@ -165,12 +165,9 @@ def run(
         # Need either a text model or an audio model.
         assert model_args.audio_model_name_or_path is not None
     # Make a directory per fold.
-    dirname = data_args.audio_source or "text-only"
-    if model_args.text_model_name_or_path is None:
-        dirname += "-only"
     training_args.output_dir = os.path.join(
         training_args.output_dir,
-        dirname,
+        f"{data_args.audio_source or 'text-only'}",
         f"fold_{data_args.data_fold}",
     )
     ctx.log.info(f"Training parameters {training_args}")
@@ -359,12 +356,11 @@ def main(ctx: Context) -> None:
             continue  # Skip datasets with no audio sources configured.
         hf_parser = tf.HfArgumentParser((ModelArguments, DataArguments, tf.TrainingArguments))
         model_args, data_args, training_args = hf_parser.parse_dict(cfg)
+        if model_args.audio_model_name_or_path is None:
+            # Only train on the text when there is no audio model.
+            data_args.audio_sources = [None]
         # Run the training loop.
-        text_sources = (None, model_args.text_model_name_or_path)
-        for audio_source, text_source in itertools.product(data_args.audio_sources, text_sources):
-            if audio_source is None and text_source is None:
-                continue  # No sources to train on.
-            model_args.text_model_name_or_path = text_source
+        for audio_source in data_args.audio_sources:
             data_args.audio_source = audio_source
             if data_args.data_fold is not None:
                 run(ctx, copy(model_args), copy(data_args), copy(training_args))

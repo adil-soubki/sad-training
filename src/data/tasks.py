@@ -178,6 +178,32 @@ def filter_by_token_limit(
     return ret
 
 
+def downsample(task, ddict: DatasetDict) -> DatasetDict:
+    text_column = get_config()[task].text_column
+    openai_cost_limit = 10.0     # Dollars
+    openai_cost_per_char = 3e-5  # Dollars
+    num_chars = sum([sum(map(len, ds[text_column])) for ds in ddict.values()])
+    num_entries = sum(ddict.num_rows.values())
+    avg_chars_per_entry = num_chars / num_entries
+    avg_cost_per_entry = avg_chars_per_entry * openai_cost_per_char
+    estimated_cost = avg_cost_per_entry * num_entries
+    # If it would cost more than $25 sample it down to $10.
+    if estimated_cost < 25.0:
+        return ddict  # Don't downsample cheaper datasets.
+    num_entries_to_sample = round(openai_cost_limit / avg_cost_per_entry)
+    for split in ddict:
+        split_pct = ddict[split].num_rows / num_entries
+        num_entries_wanted = round(num_entries_to_sample * split_pct)
+        hexdigests = sorted(ddict[split]["hexdigest"])[:num_entries_wanted]
+        is_selected_hexdigest = lambda e: e["hexdigest"] in hexdigests
+        ddict[split] = ddict[split].filter(
+            is_selected_hexdigest,
+            desc=f"downsampling {split}",
+        )
+        assert sorted(ddict[split]["hexdigest"]) == hexdigests
+    return ddict
+
+
 @postprocess(add_hexdigests)
 def load_unfiltered(
     task: str, fold: int = 0, k: int = 5, seed: int = 42
@@ -196,6 +222,7 @@ def load_unfiltered(
 
 @postprocess(filter_by_token_limit)
 @postprocess(filter_by_char_limit)
+@postprocess(downsample)
 def load_filtered(
     task: str, fold: int = 0, k: int = 5, seed: int = 42
 ) -> DatasetDict:

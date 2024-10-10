@@ -40,6 +40,7 @@ def get_task_df(task: str, text_model: str, filtered: bool) -> pd.DataFrame:
     # Collect a list of entries with errors.
     tts_character_limit = 4096
     text_model_token_limit = tokenizer.model_max_length
+    # TODO: For each SAD source also check how many are longer than 30 seconds.
     for row in flatten([ds.to_list() for ds in data.values()]):
         ret.append({
             "task": task,
