@@ -303,6 +303,13 @@ def run(
             predictions, eval_pred.label_ids, label_list, metric, trainer,
             model_args, data_args, training_args
         )
+        # Write log data.
+        pd.DataFrame([h for h in trainer.state.log_history if "loss" in h]).to_csv(
+            os.path.join(training_args.output_dir, "train_loss.csv"), index=False
+        )
+        pd.DataFrame([h for h in trainer.state.log_history if "eval_loss" in h]).to_csv(
+            os.path.join(training_args.output_dir, "eval_loss.csv"), index=False
+        )
         # Return metrics.
         eval_kwargs = {"predictions": predictions, "references": eval_pred.label_ids}
         if metric == f1_per_class:
