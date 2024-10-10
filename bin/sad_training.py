@@ -168,7 +168,7 @@ def run(
     training_args.output_dir = os.path.join(
         training_args.output_dir,
         f"{data_args.audio_source or 'text-only'}",
-        f"fold_{data_args.data_fold}",
+        f"fold_{data_args.data_fold}_seed_{training_args.seed}",
     )
     ctx.log.info(f"Training parameters {training_args}")
     ctx.log.info(f"Data parameters {data_args}")
@@ -363,11 +363,18 @@ def main(ctx: Context) -> None:
         for audio_source in data_args.audio_sources:
             data_args.audio_source = audio_source
             if data_args.data_fold is not None:
-                run(ctx, copy(model_args), copy(data_args), copy(training_args))
+                # If a single fold is given, run over 3 seeds.
+                if training_args.seed != 42:
+                    parser.error("seeds are hardcoded when not using kfold")
+                for seed in (42, 0, 1):
+                    training_args.seed = seed
+                    run(ctx, copy(model_args), copy(data_args), copy(training_args))
                 continue  # Skip the other folds since a fold was specified.
             for fold in range(data_args.data_num_folds):
                 data_args.data_fold = fold
                 run(ctx, copy(model_args), copy(data_args), copy(training_args))
+            # We only get here if this was the original setting of data_fold.
+            data_args.data_fold = None
 
 
 if __name__ == "__main__":
