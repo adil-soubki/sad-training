@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
+import glob
+import json
 import os
 
 import datasets
+import numpy as np
 import pandas as pd
-from sklearn.model_selection import KFold
-from head2span import get_text_span
-import json
 import re
 from typing import List, Dict
-
 from ..core.path import dirparent
 
-FB_TO_CLF = {
+CB_TO_CLF = {
     3.0: 'CT+',
     2.0: 'PR+',
     1.0: 'PR+',
@@ -21,7 +20,7 @@ FB_TO_CLF = {
     -3.0: 'CT-',
 }
 
-FB_DIR = os.path.join(dirparent(os.path.realpath(__file__), 3), "data", "fb")
+CB_TEXTONLY_DIR = os.path.join(dirparent(os.path.realpath(__file__), 3), "data", "cb_text_only")
 
 def normalize_text(text: str) -> str:
     text = re.sub(r'\s+', ' ', text)
@@ -46,7 +45,6 @@ def normalize_text(text: str) -> str:
     
     return text
 
-
 def process_jsonl(file_path: str) -> List[Dict]:
     processed_data = []
     with open(file_path, 'r') as infile:
@@ -55,36 +53,26 @@ def process_jsonl(file_path: str) -> List[Dict]:
             text = normalize_text(data['text'])
             
             for target in data['targets']:
-                span_text = normalize_text(target['span_text'])
-                full_span = get_text_span(span_text, text)
-                
-                if full_span:
-                    processed_data.append({
-                        'sentence': text,
-                        'original_head': span_text,
-                        'fb_span': full_span,
-                        'label': FB_TO_CLF[round(target['label'])]
-                    })
+                span_text = normalize_text(target['span_text'])                
+                processed_data.append({
+                    'sentence': text,
+                    'cbto_span': span_text,
+                    'label': target['label']
+                })
     return processed_data
-
 
 def load_df() -> pd.DataFrame:
     ret = []
     for split in ("train", "dev", "test"):
-        file_path = os.path.join(FB_DIR, f"{split}.jsonl")
-        processed_data = process_jsonl(file_path)
-        df = pd.DataFrame(processed_data)
-        df['split'] = split
-        ret.append(df)
-    
-    df = pd.concat(ret).reset_index(drop=True)
-    return df[["sentence", "original_head", "fb_span", "label", "split"]]
+        file_path = os.path.join(CB_TEXTONLY_DIR, f"{split}.jsonl")
+        ret.extend(process_jsonl(file_path))
+    return pd.DataFrame(ret)
 
 def load() -> datasets.Dataset:
     return datasets.Dataset.from_pandas(load_df(), preserve_index=False)
 
 
-def load_kfold(fold: int, k: int = 5, seed: int = 42) -> datasets.DatasetDict: #XXX: FB has established split. Fold params are not used.
+def load_kfold(fold: int, k: int = 5, seed: int = 42) -> datasets.DatasetDict: #XXX: CBTO has established split. Fold params are not used.
     fb = load()
     return datasets.DatasetDict({
         "train": fb.filter(lambda x: x['split'] == 'train'), #XXX: Not using dev yet.

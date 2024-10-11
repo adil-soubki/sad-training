@@ -210,6 +210,12 @@ class MultimodalClassifier(nn.Module):
         else:
             raise ValueError
         # Compute loss.
+        
+        # Fusion and classification
+        fusion_features = torch.cat([text_pooled, audio_pooled, opensmile_features], dim=1)
+        logits = self.classification_head(fusion_features)
+        
+        # Compute loss
         loss = None
         if labels is not None:
             if self.config.num_labels == 1:

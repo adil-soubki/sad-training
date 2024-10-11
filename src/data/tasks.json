@@ -78,5 +78,17 @@
         "dataset_kwargs": {},
         "text_column": "input_text",
         "label_column": "label"
+    },
+    "factbank": {
+        "dataset": "factbank",
+        "dataset_kwargs": {},
+        "text_column": "fb_span",
+        "label_column": "label"
+    },
+    "osc": {
+        "dataset": "osc",
+        "dataset_kwargs": {},
+        "text_column": "text",
+        "label_column": "label"
     }
 }
