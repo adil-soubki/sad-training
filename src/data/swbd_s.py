@@ -32,7 +32,13 @@ def load_kfold(fold: int, k: int = 5, seed: int = 42) -> datasets.DatasetDict:
             "test": ds.select([]),
         })
     # Otherwise do kfold splitting.
-    kf = KFold(n_splits=k, random_state=seed, shuffle=True)
+    # XXX: Do not honor the given seed. Moving examples across splits
+    #   breaks the downsampling code now. Need to fix this later. This
+    #   is because it samples and sorts hexdigests within each split
+    #   so when splits change the sorting changes and then the selected
+    #   hexdigests change. Should fix this but don't want to mess with
+    #   how everything is working currently.
+    kf = KFold(n_splits=k, random_state=19, shuffle=True)
     train_idxs, test_idxs = list(kf.split(ds))[fold]
     return datasets.DatasetDict({
         "train": ds.select(train_idxs),
