@@ -158,6 +158,7 @@ class IEMOCAPCatLoader(EmotionDatasetLoader):
         return np.array([e[key] for e in data])
 
     def _preprocessing_text(self, text):
+        return text.strip()  # XXX: Adil did this.
         t = re.sub(r'([{}])'.format(string.punctuation), r' \1 ', text)
         t = re.sub('\s{2,}', ' ', t)  # pad punctuations for bpe
         t = re.sub(r"\\n", " ", t)  # remove explicit \n
@@ -191,6 +192,24 @@ class IEMOCAPCatLoader(EmotionDatasetLoader):
 # == https://github.com/SungjoonPark/EmotionDetection/blob/master/src/data/loader.py == #
 
 
+# NOTE: This overrides load_data() to also include a turn id.
+def load_data(self):
+    preprocessed_data = self._load_preprocess_raw_data()
+    splits = self._split_data(preprocessed_data)
+
+    data = {}
+    for s_name, s_data in zip(self.split_names, splits):
+        text = [s_row['transcription'] for s_row in s_data]
+        labels = [s_row['emotion'] for s_row in s_data]
+        turn_ids = [s_row['id'] for s_row in s_data]
+        data[s_name] = {}
+        for name, d in zip(self.data_types + ["turn_id"], [text, labels, turn_ids]):
+            data[s_name][name] = d
+    return data
+IEMOCAPCatLoader.load_data = load_data
+
+
+# NOTE: Should we do KFold? Using their splits for now.
 def load() -> datasets.Dataset:
     ret = datasets.DatasetDict()
     loader = IEMOCAPCatLoader()
@@ -208,6 +227,17 @@ def load() -> datasets.Dataset:
         "label",
         datasets.ClassLabel(num_classes=len(label_list), names=label_list)
     )
+    def add_audio(row: dict[str, Any]) -> dict[str, Any]:
+        session = int(row["turn_id"].split("_")[0].replace("Ses", "")[:-1])
+        scene = "_".join(row["turn_id"].split("_")[:-1])
+        path = os.path.join(
+            IEMOCAP_DIR, f"Session{session}", "sentences",
+            "wav", scene, row["turn_id"] + ".wav"
+        )
+        row["audio"] = path
+        return row
+    ret = ret.map(add_audio)
+    ret = ret.cast_column("audio", datasets.Audio(sampling_rate=16_000))
     return ret
 
 

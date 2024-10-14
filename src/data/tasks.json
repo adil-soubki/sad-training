@@ -67,6 +67,12 @@
         "text_column": "text",
         "label_column": "label"
     },
+    "swbd_s": {
+        "dataset": "swbd_s",
+        "dataset_kwargs": {},
+        "text_column": "text",
+        "label_column": "label"
+    },
     "wsc": {
         "dataset": "wsc",
         "dataset_kwargs": {},

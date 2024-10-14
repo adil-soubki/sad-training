@@ -9,7 +9,7 @@ import datasets
 from ..core.path import dirparent
 from ..data import (
     commitment_bank, commitment_bank_text_only, fact_bank,
-    fantom, goemotions, iemocap, super_glue, wikiface, wsj
+    fantom, goemotions, iemocap, super_glue, swbd_s, wikiface, wsj
 )
 
 
@@ -18,6 +18,7 @@ CMAP = {
     "commitment_bank_text_only": commitment_bank_text_only,
     "fact_bank": fact_bank,
     "fantom": fantom,
+    "swbd_s": swbd_s,
     "wikiface": wikiface,  # XXX: Delete me.
     "wsj": wsj,  # XXX: Delete me.
 }

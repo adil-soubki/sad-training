@@ -18,7 +18,7 @@ fi
 if [ -z $task ]; then
     task=(
         "boolq" "commitment_bank" "commitment_bank_text_only"
-        "fact_bank" "goemotions" "wsc" "wic"
+        "fact_bank" "goemotions" "iemocap" "imdb" "swbd_s" "wsc" "wic"
     );
 fi
 
