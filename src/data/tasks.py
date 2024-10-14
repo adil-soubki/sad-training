@@ -187,6 +187,9 @@ def downsample(task, ddict: DatasetDict) -> DatasetDict:
     avg_chars_per_entry = num_chars / num_entries
     avg_cost_per_entry = avg_chars_per_entry * openai_cost_per_char
     estimated_cost = avg_cost_per_entry * num_entries
+    # NOTE: IMDB has long entries so this gets us closer to $10 after filtering.
+    if task == "imdb":
+        openai_cost_limit = 17.0     # Dollars
     # If it would cost more than $25 sample it down to $10.
     if estimated_cost < 25.0:
         return ddict  # Don't downsample cheaper datasets.
