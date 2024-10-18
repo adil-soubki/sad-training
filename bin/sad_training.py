@@ -209,6 +209,9 @@ def run(
         )
     # Check if the audio/text data exceeds the configured audio/text_max_length
     # and print a warning if it does.
+    for split in list(data):
+        if split not in ("train", "test"):
+            del data[split]  # Remove unused splits.
     if data_args.audio_source is not None:
         validation.warn_on_audio_length(data, data_args.audio_max_length)
     if model_args.text_model_name_or_path:

@@ -2,14 +2,14 @@
     "boolq": {
         "metric_for_classification": "accuracy",
         "num_train_epochs": 10,
-        "audio_sources": ["alloy"]
+        "audio_sources": ["alloy", "matcha"]
     },
     "commitment_bank": {
         "metric_for_classification": "f1_per_class",
         "num_train_epochs": 10,
         "data_fold": null,
         "do_regression": true,
-        "audio_sources": ["alloy", "gold"]
+        "audio_sources": ["alloy", "gold", "matcha"]
     },
     "commitment_bank_text_only": {
         "metric_for_classification": "f1_per_class",
@@ -20,7 +20,7 @@
     "fact_bank": {
         "metric_for_classification": "f1_per_class",
         "num_train_epochs": 10,
-        "audio_sources": ["alloy"]
+        "audio_sources": ["alloy", "matcha"]
     },
     "fantom_bin": {
         "metric_for_classification": "accuracy",
@@ -34,7 +34,7 @@
     "goemotions": {
         "metric_for_classification": "f1_per_class",
         "num_train_epochs": 10,
-        "audio_sources": ["alloy"]
+        "audio_sources": ["alloy", "matcha"]
     },
     "goemotions_ekman": {
         "metric_for_classification": "f1_per_class",
@@ -42,27 +42,26 @@
     },
     "iemocap": {
         "metric_for_classification": "f1_per_class",
-        "audio_sources": ["alloy", "gold"]
+        "audio_sources": ["alloy", "matcha", "gold"]
     },
     "imdb": {
         "metric_for_classification": "accuracy",
         "num_train_epochs": 10,
-        "audio_sources": ["alloy"]
+        "audio_sources": ["alloy", "matcha"]
     },
     "swbd_s": {
         "metric_for_classification": "accuracy",
         "num_train_epochs": 10,
-        "data_fold": null,
         "do_regression": true,
-        "audio_sources": ["alloy", "gold"]
+        "audio_sources": ["alloy", "matcha", "gold"]
     },
     "wsc": {
         "metric_for_classification": "accuracy",
         "num_train_epochs": 10,
-        "audio_sources": ["alloy"]
+        "audio_sources": ["alloy", "matcha"]
     },
     "wic": {
         "metric_for_classification": "accuracy",
-        "audio_sources": ["alloy"]
+        "audio_sources": ["alloy", "matcha"]
     }
 }
