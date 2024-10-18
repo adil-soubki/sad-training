@@ -11,7 +11,7 @@ from ..core.path import dirparent
 # TODO: This module should be "commitment_bank" and the other module should be
 #   "commitment_bank_prosody" since this is the more common naming used.
 CB_DIR = os.path.join(
-    dirparent(os.path.realpath(__file__), 3), "data", "cb_text_only"
+    dirparent(os.path.realpath(__file__), 3), "data", "cb_text_only", "original"
 )
 
 
